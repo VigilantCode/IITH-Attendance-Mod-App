@@ -1,17 +1,15 @@
-# timetable
+# IITH Attendance MOD
 
-A new Flutter project.
+## Overview
 
-## Getting Started
+**IITH Attendance MOD** is a modified attendance application designed for students at IIT Hyderabad. This app simplifies the attendance process by removing Bluetooth verification and selfie capture requirements. Users can mark their attendance from anywhere simply by logging in with their username and date of birth (DOB).
 
-This project is a starting point for a Flutter application.
+## Installation
 
-A few resources to get you started if this is your first Flutter project:
+- Download the [attendance.apk](https://github.com/VigilantCode/IITH-Attendance-Mod-App/releases/download/v1.0.0/attendance.apk) file.
+- Install the application on your Android device.
+- Launch the app, log in, and start marking your attendance.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+If you encounter a bug, have a feature suggestion, or experience any issues, please report them in the Issues section of the GitHub repository. 
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# erp-mod
+##### We welcome contributions to enhance and improve the IITH Attendance MOD application. Contributions are highly valued, whether they are large or small. Thank you for helping make IITH Attendance MOD better for all users!
