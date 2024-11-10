@@ -6,7 +6,7 @@
 
 ## Installation
 
-- Download the [attendance.apk](https://github.com/VigilantCode/IITH-Attendance-Mod-App/releases/download/v1.0.0/attendance.apk) file.
+- Download the [attendance.apk](https://github.com/VigilantCode/IITH-Attendance-Mod-App/releases/download/app/attendance.apk) file.
 - Install the application on your Android device.
 - Launch the app, log in, and start marking your attendance.
 

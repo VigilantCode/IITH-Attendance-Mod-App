@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         title: const Center(
           child: Text(
-            'ERP MKC',
+            'Attendance',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
