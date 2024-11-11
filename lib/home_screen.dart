@@ -70,10 +70,46 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<UserModel?> _validateUser(UserModel user) async {
+    final resp = await ApiService().login(user.userEmail, user.dob);
+
+    if (resp != null) {
+      return UserModel(
+          dob: user.dob,
+          userEmail: user.userEmail,
+          ref: resp[0]['referenceId'],
+          userName: resp[0]['studentName']);
+    }
+    return null;
+  }
+
   Future<void> _addGroupMember(UserModel member) async {
+    bool alreadyExists =
+        _groupMembers.any((m) => m.userEmail == member.userEmail);
+
+    if (alreadyExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Center(child: Text('User already exists in your group'))),
+      );
+      return;
+    }
+
+    UserModel? user = await _validateUser(member);
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Center(
+                child: Text('Failed to validate user, Check credintials!'))),
+      );
+      return;
+    }
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _groupMembers.add(member);
+      _groupMembers.add(user);
+
       List<String> memberJsonList =
           _groupMembers.map((m) => m.toJson()).toList();
       prefs.setStringList('groupMembers', memberJsonList);
@@ -113,7 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final member = _groupMembers[index];
                         return ListTile(
-                          title: Text(member.userName.toUpperCase()),
+                          title: Text(member.userName != null
+                              ? member.userName!.toUpperCase()
+                              : member.userEmail),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () async {
@@ -198,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 final userName = usernamecontroller.text.trim().toLowerCase();
                 final password = dobcontroller.text.trim();
 
-                _addGroupMember(UserModel(dob: password, userName: userName));
+                _addGroupMember(UserModel(dob: password, userEmail: userName));
                 Navigator.of(context).pop();
               },
               child: const Text('Add'),
@@ -232,7 +270,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     return confirm;
-
   }
 
   Future<void> _logout() async {
