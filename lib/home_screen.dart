@@ -28,8 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    _loadTimeTable();
     _loadGroupMembers();
+    _loadTimeTable();
   }
 
   Future<void> _loadUserData() async {
@@ -48,24 +48,64 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadTimeTable() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? json = prefs.getString('user');
-    if (json == null) {
-      return;
-    }
-    UserModel user = UserModel.fromJson(json);
+    // String? json = prefs.getString('user');
+    // if (json == null) {
+    //   return;
+    // }
+    // UserModel user = UserModel.fromJson(json);
 
-    try {
-      List<dynamic> timetable =
-          await _apiService.getStudentTimeTableForAttendance(user.ref ?? '');
-      setState(() {
-        _timetable = timetable;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Center(child: Text('$e'))),
-      );
-      debugPrint("Error fetching timetable: $e");
+    List<String> refs = [];
+    refs.add(me.ref ?? '');
+
+    _groupMembers.forEach((m) => refs.add(m.ref ?? ''));
+
+    Set<dynamic> uniqueTimetable = {};
+
+    for (String ref in refs) {
+      if (ref.isNotEmpty) {
+        try {
+          List<dynamic> timetable =
+              await _apiService.getStudentTimeTableForAttendance(ref);
+
+          for (var element in timetable) {
+            bool contains = false;
+            for (var ut in uniqueTimetable) {
+              if (ut['timeTableId'] == element['timeTableId']) {
+                contains = true;
+                break;
+              }
+            }
+            if (!contains) {
+              uniqueTimetable.add(element);
+            }
+          }
+
+          // uniqueTimetable.addAll(timetable);
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error fetching timetable for ref $ref')),
+          );
+          debugPrint("Error fetching timetable for ref $ref: $e");
+        }
+      }
     }
+
+    setState(() {
+      _timetable = uniqueTimetable.toList();
+    });
+
+    // try {
+    //   List<dynamic> timetable =
+    //       await _apiService.getStudentTimeTableForAttendance(user.ref ?? '');
+    //   setState(() {
+    //     _timetable = timetable;
+    //   });
+    // } catch (e) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(content: Center(child: Text('$e'))),
+    //   );
+    //   debugPrint("Error fetching timetable: $e");
+    // }
   }
 
   Future<void> _loadGroupMembers() async {
@@ -127,16 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _groupMembers.add(user);
 
-      List<String> memberJsonList =
-          _groupMembers.map((m) => m.toJson()).toList();
-      prefs.setStringList('groupMembers', memberJsonList);
-    });
-  }
-
-  Future<void> _removeGroupMember(UserModel member) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _groupMembers.remove(member);
       List<String> memberJsonList =
           _groupMembers.map((m) => m.toJson()).toList();
       prefs.setStringList('groupMembers', memberJsonList);
