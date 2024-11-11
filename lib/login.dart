@@ -115,11 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildTextField(
-                    controller: _passwordController,
-                    labelText: 'Password',
-                    prefixIcon: Icons.lock,
-                    obscureText: true,
-                  ),
+                      controller: _passwordController,
+                      labelText: 'Password',
+                      prefixIcon: Icons.lock,
+                      obscureText: true,
+                      type: TextInputType.number),
                   const SizedBox(height: 30),
                   ElevatedButton(
                     onPressed: _login,
@@ -146,13 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData prefixIcon,
-    bool obscureText = false,
-  }) {
+  Widget _buildTextField(
+      {required TextEditingController controller,
+      required String labelText,
+      required IconData prefixIcon,
+      bool obscureText = false,
+      TextInputType type = TextInputType.text}) {
     return TextFormField(
+      keyboardType: type,
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(

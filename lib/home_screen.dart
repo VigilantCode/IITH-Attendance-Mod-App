@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timetable/login.dart';
+import 'package:timetable/user_model.dart';
 import 'card.dart';
 import 'api_services.dart';
 
@@ -19,12 +20,14 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _timetable = [];
   String _userName = '';
   String _userEmail = '';
+  List<UserModel> _groupMembers = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadTimeTable();
+    _loadGroupMembers();
   }
 
   Future<void> _loadUserData() async {
@@ -50,12 +53,222 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Center(child: Text('$e'))),
         );
-        // Handle error (e.g., show a dialog or a snackbar)
         debugPrint("Error fetching timetable: $e");
       }
     } else {
-      // Handle the case where referenceId is not available
       debugPrint("Reference ID not found");
+    }
+  }
+
+  Future<void> _loadGroupMembers() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> memberJsonList = prefs.getStringList('groupMembers') ?? [];
+
+    setState(() {
+      _groupMembers =
+          memberJsonList.map((json) => UserModel.fromJson(json)).toList();
+    });
+  }
+
+  Future<void> _addGroupMember(UserModel member) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _groupMembers.add(member);
+      List<String> memberJsonList =
+          _groupMembers.map((m) => m.toJson()).toList();
+      prefs.setStringList('groupMembers', memberJsonList);
+    });
+  }
+
+  Future<void> _removeGroupMember(UserModel member) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _groupMembers.remove(member);
+      List<String> memberJsonList =
+          _groupMembers.map((m) => m.toJson()).toList();
+      prefs.setStringList('groupMembers', memberJsonList);
+    });
+  }
+
+  void _showGroupMembersSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Group Members',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _groupMembers.length,
+                      itemBuilder: (context, index) {
+                        final member = _groupMembers[index];
+                        return ListTile(
+                          title: Text(member.userName.toUpperCase()),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              bool? confirm =
+                                  await _confirmRemoveMember(member);
+                              if (confirm == true) {
+                                setState(() {
+                                  _groupMembers.remove(member);
+                                });
+                                _saveGroupMembers();
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => _showAddMemberDialog(),
+                    child: Container(
+                      width: double.infinity,
+                      height: 54,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          color: Colors.teal),
+                      child: const Center(
+                          child: Text(
+                        'Add Member',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      )),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveGroupMembers() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> memberJsonList = _groupMembers.map((m) => m.toJson()).toList();
+    prefs.setStringList('groupMembers', memberJsonList);
+  }
+
+  Future<void> _showAddMemberDialog() async {
+    final TextEditingController usernamecontroller = TextEditingController();
+    final TextEditingController dobcontroller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add New Member'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: usernamecontroller,
+              decoration: const InputDecoration(hintText: 'Enter Roll Number'),
+            ),
+            TextField(
+              controller: dobcontroller,
+              keyboardType: TextInputType.number,
+              decoration:
+                  const InputDecoration(hintText: 'Enter Password(DOB)'),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (usernamecontroller.text.trim() == '' ||
+                    dobcontroller.text.trim() == '') {
+                  return;
+                }
+
+                final userName = usernamecontroller.text.trim().toLowerCase();
+                final password = dobcontroller.text.trim();
+
+                _addGroupMember(UserModel(dob: password, userName: userName));
+                Navigator.of(context).pop();
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _confirmRemoveMember(UserModel member) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: const Text(
+              'Are you sure you want to remove this user from your group?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.green)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirm;
+
+  }
+
+  Future<void> _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    // await prefs.remove('referenceId');
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+        (route) => false);
+  }
+
+  Future<void> _confirmLogout() async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.green)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      _logout();
     }
   }
 
@@ -90,41 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove('referenceId');
-    Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (ctx) => const LoginScreen()),
-        (route) => false);
-  }
-
-  Future<void> _confirmLogout() async {
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to log out?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.green),),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Logout', style: TextStyle(color: Colors.red),),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm == true) {
-      _logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,15 +328,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 40.0),
                 ),
               ),
-              decoration: const BoxDecoration(
-                color: Colors.teal
-              ),
+              decoration: const BoxDecoration(color: Colors.teal),
             ),
             ListTile(
               leading: const Icon(Icons.group),
               title: const Text('Your Group'),
               onTap: () {
-                // Handle "Your Group" action
+                Navigator.of(context).pop(); // Close the drawer
+                _showGroupMembersSheet();
               },
             ),
             ListTile(
@@ -181,10 +358,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onMarkAttendance: () {
                       markAttendance(course['timeTableId']);
                     },
-                    date: course['attendanceDate']
-                        .split('-')[0], // Extract the day
-                    month: course['attendanceDate']
-                        .split('-')[1], // Extract the month
+                    date: course['attendanceDate'].split('-')[0],
+                    month: course['attendanceDate'].split('-')[1],
                     title: course['courseName'],
                     instructor: course['facultyName'],
                     time: course['timePeriod'],
