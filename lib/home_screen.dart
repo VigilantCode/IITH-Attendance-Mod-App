@@ -18,8 +18,10 @@ final _scaffoldKey = GlobalKey<ScaffoldState>();
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   List<dynamic> _timetable = [];
-  String _userName = '';
-  String _userEmail = '';
+  // String _userName = 'Guest';
+  // String _userEmail = 'guest@example.com';
+  UserModel me =
+      UserModel(dob: 'uk', userEmail: 'guest@example.com', userName: 'Guest');
   List<UserModel> _groupMembers = [];
 
   @override
@@ -32,31 +34,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? json = prefs.getString('user');
+    if (json == null) {
+      return;
+    }
+    UserModel user = UserModel.fromJson(json);
     setState(() {
-      _userName = prefs.getString('userName') ?? 'Guest';
-      _userEmail = prefs.getString('userEmail') ?? 'guest@example.com';
+      me = user;
+      // _userName = user.userName?.trim() ?? 'Guest';
+      // _userEmail = user.userEmail.trim().toLowerCase();
     });
   }
 
   Future<void> _loadTimeTable() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? refId = prefs.getString('referenceId');
+    String? json = prefs.getString('user');
+    if (json == null) {
+      return;
+    }
+    UserModel user = UserModel.fromJson(json);
 
-    if (refId != null) {
-      try {
-        List<dynamic> timetable =
-            await _apiService.getStudentTimeTableForAttendance(refId);
-        setState(() {
-          _timetable = timetable;
-        });
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Center(child: Text('$e'))),
-        );
-        debugPrint("Error fetching timetable: $e");
-      }
-    } else {
-      debugPrint("Reference ID not found");
+    try {
+      List<dynamic> timetable =
+          await _apiService.getStudentTimeTableForAttendance(user.ref ?? '');
+      setState(() {
+        _timetable = timetable;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Center(child: Text('$e'))),
+      );
+      debugPrint("Error fetching timetable: $e");
     }
   }
 
@@ -71,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<UserModel?> _validateUser(UserModel user) async {
-    final resp = await ApiService().login(user.userEmail, user.dob);
+    final resp =
+        await ApiService().login(user.userEmail, user.dob, group: true);
 
     if (resp != null) {
       return UserModel(
@@ -83,7 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  Future<void> _addGroupMember(UserModel member) async {
+  Future<void> _addGroupMember(UserModel member, BuildContext context) async {
+    if (me.userEmail == member.userEmail) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Center(child: Text('You cannot add yourself to your group'))),
+      );
+      return;
+    }
     bool alreadyExists =
         _groupMembers.any((m) => m.userEmail == member.userEmail);
 
@@ -236,7 +253,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final userName = usernamecontroller.text.trim().toLowerCase();
                 final password = dobcontroller.text.trim();
 
-                _addGroupMember(UserModel(dob: password, userEmail: userName));
+                _addGroupMember(
+                    UserModel(dob: password, userEmail: userName), context);
                 Navigator.of(context).pop();
               },
               child: const Text('Add'),
@@ -274,8 +292,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    // await prefs.remove('referenceId');
+    // await prefs.clear();
+    await prefs.remove('user');
     Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (ctx) => const LoginScreen()),
@@ -309,9 +327,50 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> markAttendance(String timetableId) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? refId = prefs.getString('referenceId');
+  Future<void> _markAttendanceDialog(String timetableId) async {
+    int? choice = await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: const Text('Mark attendance?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(0), // Return 0 for "Mark for me"
+              child: const Text('Mark for me',
+                  style: TextStyle(color: Colors.teal)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context)
+                  .pop(1), // Return 1 for "Mark for everyone"
+              child: const Text('Mark for everyone',
+                  style: TextStyle(color: Colors.teal)),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(null), // Return null for "Cancel"
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (choice == null) {
+      return;
+    }
+
+    await markAttendance(timetableId, me);
+
+    if (choice == 1) {
+      for (var user in _groupMembers) {
+        await markAttendance(timetableId, user);
+      }
+    }
+  }
+
+  Future<void> markAttendance(String timetableId, UserModel user) async {
+    String? refId = user.ref;
 
     if (refId != null) {
       try {
@@ -319,14 +378,18 @@ class _HomeScreenState extends State<HomeScreen> {
             refId, timetableId);
         if (x == 1) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Center(child: Text('Failed to mark attendance'))),
+            SnackBar(
+                content: Center(
+                    child: Text(
+                        'Failed to mark attendance for ${user.userName}'))),
           );
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Center(child: Text('Attendance marked successfully'))),
+          SnackBar(
+              content: Center(
+                  child: Text(
+                      'Attendance marked successfully for ${user.userName}'))),
         );
         _loadTimeTable();
       } catch (e) {
@@ -357,11 +420,13 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: EdgeInsets.zero,
           children: <Widget>[
             UserAccountsDrawerHeader(
-              accountName: Text(_userName.toUpperCase()),
-              accountEmail: Text(_userEmail.toUpperCase()),
+              accountName: Text(me.userName?.toUpperCase() ?? 'Guest'),
+              accountEmail: Text(me.userEmail.toUpperCase()),
               currentAccountPicture: CircleAvatar(
                 child: Text(
-                  _userName.isNotEmpty ? _userName[0] : '',
+                  me.userName != null && me.userName!.isNotEmpty
+                      ? me.userName![0]
+                      : 'G',
                   style: const TextStyle(fontSize: 40.0),
                 ),
               ),
@@ -393,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.only(bottom: 10.0),
                   child: EventCard(
                     onMarkAttendance: () {
-                      markAttendance(course['timeTableId']);
+                      _markAttendanceDialog(course['timeTableId']);
                     },
                     date: course['attendanceDate'].split('-')[0],
                     month: course['attendanceDate'].split('-')[1],

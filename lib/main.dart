@@ -19,7 +19,7 @@ void main() async {
 
 Future<bool> _checkLoginStatus() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  return prefs.containsKey('referenceId');
+  return prefs.containsKey('user');
 }
 
 class MyApp extends StatelessWidget {

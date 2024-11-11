@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timetable/user_model.dart';
 import 'api_services.dart';
 import 'home_screen.dart';
 
@@ -31,8 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
-      final username = _usernameController.text;
-      final password = _passwordController.text;
+      final username = _usernameController.text.trim().toLowerCase();
+      final password = _passwordController.text.trim();
 
       Navigator.push(
           context,
@@ -54,9 +55,18 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('referenceId', response[0]['referenceId']);
-      await prefs.setString('userEmail', username);
-      await prefs.setString('userName', response[0]['studentName']);
+      // await prefs.setString('referenceId', response[0]['referenceId']);
+      // await prefs.setString('userEmail', username);
+      // await prefs.setString('userName', response[0]['studentName']);
+
+      final user = UserModel(
+          userEmail: username,
+          userName: response[0]['studentName'],
+          ref: response[0]['referenceId'],
+          dob: password);
+
+      await prefs.setString('user', user.toJson());
+
       _navigateToHome();
 
       // if (success) {

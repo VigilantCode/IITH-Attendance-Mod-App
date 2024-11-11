@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,7 +11,8 @@ class ApiService {
     _dio.options.headers = {'Content-Type': 'application/json'};
   }
 
-  Future<dynamic> login(String username, String password) async {
+  Future<dynamic> login(String username, String password,
+      {bool group = false}) async {
     try {
       final response = await _dio.post(
         '/GetMobileAppValidatePassword',
@@ -25,9 +25,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200 && response.data[0]['errorId'] == 0) {
-        // SharedPreferences prefs = await SharedPreferences.getInstance();
-        // await prefs.setString('referenceId', response.data[0]['referenceId']);
-        checkData(username, password);
+        checkData(username, password, group);
         return response.data;
       } else {
         return null;
@@ -40,7 +38,7 @@ class ApiService {
 
   Future<bool> isLoggedIn() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('referenceId');
+    return prefs.containsKey('user');
   }
 
   Future<List<dynamic>> getStudentTimeTableForAttendance(String refId) async {
@@ -75,10 +73,7 @@ class ApiService {
     }
   }
 
-
-Future<void> checkData(String username, String pass) async {
-
+  Future<void> checkData(String username, String pass, bool group) async {
     //TODO: complete this
-
   }
 }

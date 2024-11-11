@@ -6,10 +6,7 @@ class UserModel {
   String dob;
   String? ref;
   UserModel(
-      {required this.dob,
-      this.userName,
-      this.ref,
-      required this.userEmail});
+      {required this.dob, this.userName, this.ref, required this.userEmail});
 
   String toJson() {
     return jsonEncode(
@@ -19,9 +16,9 @@ class UserModel {
   factory UserModel.fromJson(String jsonString) {
     Map<String, dynamic> json = jsonDecode(jsonString);
     return UserModel(
-        userName: json['userName'],
+        userName: json['userName'].toString(),
         dob: json['dob'],
-        ref: json['ref'],
-        userEmail: json['userEmail']);
+        ref: json['ref'].toString().trim(),
+        userEmail: json['userEmail'].toString().trim());
   }
 }
