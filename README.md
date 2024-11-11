@@ -4,9 +4,15 @@
 
 **IITH Attendance MOD** is a modified attendance application designed for students at IIT Hyderabad. This app simplifies the attendance process by removing Bluetooth verification and selfie capture requirements. Users can mark their attendance from anywhere simply by logging in with their username and date of birth (DOB).
 
+## Features
+
+- Mark attendance without requiring Bluetooth or selfie verification.
+- Add friends and **mark attendance on their behalf**.
+- View a combined timetable for all group members.
+
 ## Installation
 
-- Download the [attendance.apk](https://github.com/VigilantCode/IITH-Attendance-Mod-App/releases/download/iith-app-v1.0.3/attendance.apk) file.
+- Download the [attendance.apk](https://github.com/VigilantCode/IITH-Attendance-Mod-App/releases/download/attendance-app/attendance.apk) file.
 - Install the application on your Android device.
 - Launch the app, log in, and start marking your attendance.
 
