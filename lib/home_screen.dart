@@ -12,14 +12,27 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
+final _scaffoldKey = GlobalKey<ScaffoldState>();
+
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   List<dynamic> _timetable = [];
+  String _userName = '';
+  String _userEmail = '';
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _loadTimeTable();
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Guest';
+      _userEmail = prefs.getString('userEmail') ?? 'guest@example.com';
+    });
   }
 
   Future<void> _loadTimeTable() async {
@@ -56,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
             refId, timetableId);
         if (x == 1) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Center(child: Text('Failed to mark attendance'))),
+            const SnackBar(
+                content: Center(child: Text('Failed to mark attendance'))),
           );
           return;
         }
@@ -76,27 +90,84 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('referenceId');
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+        (route) => false);
+  }
+
+  Future<void> _confirmLogout() async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.green),),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout', style: TextStyle(color: Colors.red),),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      _logout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Today\'s Schedule'),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 24),
-            child: InkWell(
-              onTap: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.remove('referenceId');
-                Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (ctx) => const LoginScreen()),
-                    (route) => false);
-              },
-              child: const Icon(Icons.logout),
-            ),
-          )
+          IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => _scaffoldKey.currentState?.openEndDrawer())
         ],
+      ),
+      endDrawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            UserAccountsDrawerHeader(
+              accountName: Text(_userName.toUpperCase()),
+              accountEmail: Text(_userEmail.toUpperCase()),
+              currentAccountPicture: CircleAvatar(
+                child: Text(
+                  _userName.isNotEmpty ? _userName[0] : '',
+                  style: const TextStyle(fontSize: 40.0),
+                ),
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.teal
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Your Group'),
+              onTap: () {
+                // Handle "Your Group" action
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: _confirmLogout,
+            ),
+          ],
+        ),
       ),
       body: _timetable.isNotEmpty
           ? ListView.builder(
@@ -117,7 +188,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: course['courseName'],
                     instructor: course['facultyName'],
                     time: course['timePeriod'],
-                    status:  course['attendanceMarked'] ? "DONE" :  course['isAttendanceMarkApplicable'] == 0 ? "N/A" : "PENDING",
+                    status: course['attendanceMarked']
+                        ? "DONE"
+                        : course['isAttendanceMarkApplicable'] == 0
+                            ? "N/A"
+                            : "PENDING",
                   ),
                 );
               },

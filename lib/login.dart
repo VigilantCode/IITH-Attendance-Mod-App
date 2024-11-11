@@ -55,6 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('referenceId', response[0]['referenceId']);
+      await prefs.setString('userEmail', username);
+      await prefs.setString('userName', response[0]['studentName']);
       _navigateToHome();
 
       // if (success) {
