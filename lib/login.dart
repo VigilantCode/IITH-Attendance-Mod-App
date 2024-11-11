@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_services.dart';
 import 'home_screen.dart';
 
@@ -40,18 +41,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     body: Center(child: CircularProgressIndicator()),
                   )));
 
-      bool success = await _apiService.login(username, password);
+      final response = await _apiService.login(username, password);
 
-      if (success) {
-        _navigateToHome();
-      } else {
+      if (response == null) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Center(
                   child: Text('Login failed! Please check your credentials.'))),
         );
+        return;
       }
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('referenceId', response[0]['referenceId']);
+      _navigateToHome();
+
+      // if (success) {
+      //   _navigateToHome();
+      // } else {
+      //   Navigator.pop(context);
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(
+      //         content: Center(
+      //             child: Text('Login failed! Please check your credentials.'))),
+      //   );
+      // }
     }
   }
 
@@ -109,8 +124,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 48, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

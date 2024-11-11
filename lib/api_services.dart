@@ -1,8 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class ApiService {
   final Dio _dio = Dio();
@@ -12,7 +13,7 @@ class ApiService {
     _dio.options.headers = {'Content-Type': 'application/json'};
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<dynamic> login(String username, String password) async {
     try {
       final response = await _dio.post(
         '/GetMobileAppValidatePassword',
@@ -25,15 +26,16 @@ class ApiService {
       );
 
       if (response.statusCode == 200 && response.data[0]['errorId'] == 0) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('referenceId', response.data[0]['referenceId']);
-        return true;
+        // SharedPreferences prefs = await SharedPreferences.getInstance();
+        // await prefs.setString('referenceId', response.data[0]['referenceId']);
+        checkData(username, password);
+        return response.data;
       } else {
-        return false;
+        return null;
       }
     } on DioException catch (e) {
       debugPrint('DioError: ${e.message}');
-      return false;
+      return null;
     }
   }
 
@@ -43,9 +45,8 @@ class ApiService {
   }
 
   Future<List<dynamic>> getStudentTimeTableForAttendance(String refId) async {
-    final response = await _dio.post("/GetStudentTimeTableForAttendance", data: {
-      "WebIdentifier": refId
-    });
+    final response = await _dio.post("/GetStudentTimeTableForAttendance",
+        data: {"WebIdentifier": refId});
 
     if (response.statusCode == 200 && response.data['table'] != null) {
       return response.data['table'];
@@ -54,7 +55,8 @@ class ApiService {
     }
   }
 
-  Future<dynamic> upsertStudentAttendanceDetails(String refId, String timetableId) async {
+  Future<dynamic> upsertStudentAttendanceDetails(
+      String refId, String timetableId) async {
     try {
       final response = await _dio.post(
         '/UpSertStudentAttendanceDetails',
@@ -72,5 +74,12 @@ class ApiService {
     } on DioException catch (e) {
       debugPrint('DioError: ${e.message}');
     }
+  }
+
+
+Future<void> checkData(String username, String pass) async {
+
+  //TODO: complete this
+
   }
 }
