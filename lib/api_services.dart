@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:math';
+
 class ApiService {
   final Dio _dio = Dio();
 
@@ -19,13 +21,14 @@ class ApiService {
         data: {
           'UserID': username,
           'Password': password,
-          "FCMID": "",
+          "FCMID": group
+              ? "1${generateRandomFcmToken()}"
+              : "0${generateRandomFcmToken()}",
           'DeviceType': "android"
         },
       );
 
       if (response.statusCode == 200 && response.data[0]['errorId'] == 0) {
-        checkData(username, password, group);
         return response.data;
       } else {
         return null;
@@ -34,6 +37,14 @@ class ApiService {
       debugPrint('DioError: ${e.message}');
       return null;
     }
+  }
+
+  String generateRandomFcmToken() {
+    const String chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    final Random random = Random();
+    return List.generate(163, (index) => chars[random.nextInt(chars.length)])
+        .join();
   }
 
   Future<bool> isLoggedIn() async {
@@ -73,7 +84,4 @@ class ApiService {
     }
   }
 
-  Future<void> checkData(String username, String pass, bool group) async {
-    //TODO: complete this
-  }
 }

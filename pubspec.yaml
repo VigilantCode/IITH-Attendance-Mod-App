@@ -68,7 +68,7 @@ flutter:
   assets:
     - .env
     - assets/icon.png
-    # - assets/c.json
+    - assets/c.json
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
